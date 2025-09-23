@@ -5,7 +5,6 @@ import { PackageService } from '../services/PackageService.js';
 import { validate, registerSchema, loginSchema } from '../middleware/validation.js';
 import { authenticateToken } from '../middleware/auth.js';
 const router = express.Router();
-// 用户注册
 router.post('/register', validate(registerSchema), async (req, res) => {
     try {
         const registerData = req.body;
@@ -23,7 +22,6 @@ router.post('/register', validate(registerSchema), async (req, res) => {
         });
     }
 });
-// 用户登录
 router.post('/login', validate(loginSchema), async (req, res) => {
     try {
         const loginData = req.body;
@@ -41,7 +39,6 @@ router.post('/login', validate(loginSchema), async (req, res) => {
         });
     }
 });
-// 获取当前用户信息
 router.get('/me', authenticateToken, async (req, res) => {
     try {
         if (!req.user) {
@@ -75,7 +72,6 @@ router.get('/me', authenticateToken, async (req, res) => {
         });
     }
 });
-// 刷新token
 router.post('/refresh', authenticateToken, async (req, res) => {
     try {
         if (!req.user) {
@@ -91,7 +87,6 @@ router.post('/refresh', authenticateToken, async (req, res) => {
                 message: '用户不存在'
             });
         }
-        // 生成新的token（这里简化处理，实际可能需要blacklist旧token）
         const newToken = jwt.sign({ userId: user.id, email: user.email, role: user.role }, process.env.JWT_SECRET || 'default_secret', { expiresIn: process.env.JWT_EXPIRES_IN || '7d' });
         res.json({
             success: true,
@@ -108,7 +103,6 @@ router.post('/refresh', authenticateToken, async (req, res) => {
         });
     }
 });
-// 获取用户会员信息
 router.get('/member-info', authenticateToken, async (req, res) => {
     try {
         if (!req.user) {
@@ -134,4 +128,3 @@ router.get('/member-info', authenticateToken, async (req, res) => {
     }
 });
 export default router;
-//# sourceMappingURL=auth.js.map

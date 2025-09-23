@@ -4,27 +4,18 @@ import { authenticateToken, requireAdmin } from '../middleware/auth.js';
 import { validateRequest } from '../middleware/validation.js';
 import { z } from 'zod';
 const router = express.Router();
-// ==================== API令牌管理路由 ====================
-// 创建API令牌验证模式（简化版）
 const createApiTokenSchema = z.object({
     name: z.string().min(1, '令牌名称不能为空').max(100, '令牌名称不能超过100个字符'),
     token: z.string().min(1, 'API令牌不能为空').max(500, 'API令牌不能超过500个字符')
 });
-// 更新API令牌验证模式（简化版）
 const updateApiTokenSchema = z.object({
     name: z.string().min(1).max(100).optional(),
     token: z.string().min(1).max(500).optional(),
     status: z.enum(['active', 'inactive']).optional()
 });
-/**
- * @route GET /api/config/tokens
- * @desc 获取所有API令牌
- * @access Admin
- */
 router.get('/tokens', authenticateToken, requireAdmin, async (req, res) => {
     try {
         const tokens = await ConfigService.getAllApiTokens();
-        // 隐藏敏感的令牌信息，只显示前几位和后几位
         const safeTokens = tokens.map(token => ({
             ...token,
             token: token.token.length > 10
@@ -48,11 +39,6 @@ router.get('/tokens', authenticateToken, requireAdmin, async (req, res) => {
         res.status(500).json(response);
     }
 });
-/**
- * @route GET /api/config/tokens/:id
- * @desc 获取单个API令牌详情
- * @access Admin
- */
 router.get('/tokens/:id', authenticateToken, requireAdmin, async (req, res) => {
     try {
         const id = parseInt(req.params.id);
@@ -71,7 +57,6 @@ router.get('/tokens/:id', authenticateToken, requireAdmin, async (req, res) => {
             };
             return res.status(404).json(response);
         }
-        // 隐藏敏感信息
         const safeToken = {
             ...token,
             token: token.token.length > 10
@@ -95,16 +80,10 @@ router.get('/tokens/:id', authenticateToken, requireAdmin, async (req, res) => {
         res.status(500).json(response);
     }
 });
-/**
- * @route POST /api/config/tokens
- * @desc 创建API令牌
- * @access Admin
- */
 router.post('/tokens', authenticateToken, requireAdmin, validateRequest(createApiTokenSchema), async (req, res) => {
     try {
         const tokenData = req.body;
         const newToken = await ConfigService.createApiToken(tokenData);
-        // 隐藏敏感信息
         const safeToken = {
             ...newToken,
             token: newToken.token.length > 10
@@ -128,11 +107,6 @@ router.post('/tokens', authenticateToken, requireAdmin, validateRequest(createAp
         res.status(500).json(response);
     }
 });
-/**
- * @route PUT /api/config/tokens/:id
- * @desc 更新API令牌
- * @access Admin
- */
 router.put('/tokens/:id', authenticateToken, requireAdmin, validateRequest(updateApiTokenSchema), async (req, res) => {
     try {
         const id = parseInt(req.params.id);
@@ -145,7 +119,6 @@ router.put('/tokens/:id', authenticateToken, requireAdmin, validateRequest(updat
         }
         const updateData = req.body;
         const updatedToken = await ConfigService.updateApiToken(id, updateData);
-        // 隐藏敏感信息
         const safeToken = {
             ...updatedToken,
             token: updatedToken.token.length > 10
@@ -169,11 +142,6 @@ router.put('/tokens/:id', authenticateToken, requireAdmin, validateRequest(updat
         res.status(500).json(response);
     }
 });
-/**
- * @route DELETE /api/config/tokens/:id
- * @desc 删除API令牌
- * @access Admin
- */
 router.delete('/tokens/:id', authenticateToken, requireAdmin, async (req, res) => {
     try {
         const id = parseInt(req.params.id);
@@ -201,8 +169,6 @@ router.delete('/tokens/:id', authenticateToken, requireAdmin, async (req, res) =
         res.status(500).json(response);
     }
 });
-// ==================== 系统配置管理路由 ====================
-// 系统配置验证模式
 const systemConfigSchema = z.object({
     configs: z.array(z.object({
         key: z.string().min(1),
@@ -211,11 +177,6 @@ const systemConfigSchema = z.object({
         type: z.enum(['string', 'number', 'boolean', 'json']).optional()
     }))
 });
-/**
- * @route GET /api/config/system
- * @desc 获取所有系统配置
- * @access Admin
- */
 router.get('/system', authenticateToken, requireAdmin, async (req, res) => {
     try {
         const configs = await ConfigService.getAllConfigs();
@@ -236,11 +197,6 @@ router.get('/system', authenticateToken, requireAdmin, async (req, res) => {
         res.status(500).json(response);
     }
 });
-/**
- * @route GET /api/config/system/:key
- * @desc 获取单个系统配置
- * @access Admin
- */
 router.get('/system/:key', authenticateToken, requireAdmin, async (req, res) => {
     try {
         const { key } = req.params;
@@ -269,11 +225,6 @@ router.get('/system/:key', authenticateToken, requireAdmin, async (req, res) => 
         res.status(500).json(response);
     }
 });
-/**
- * @route PUT /api/config/system
- * @desc 批量更新系统配置
- * @access Admin
- */
 router.put('/system', authenticateToken, requireAdmin, validateRequest(systemConfigSchema), async (req, res) => {
     try {
         const { configs } = req.body;
@@ -294,11 +245,6 @@ router.put('/system', authenticateToken, requireAdmin, validateRequest(systemCon
         res.status(500).json(response);
     }
 });
-/**
- * @route GET /api/config/site-info
- * @desc 获取网站基础信息（公开接口）
- * @access Public
- */
 router.get('/site-info', async (req, res) => {
     try {
         const siteInfo = await ConfigService.getSiteInfo();
@@ -319,11 +265,6 @@ router.get('/site-info', async (req, res) => {
         res.status(500).json(response);
     }
 });
-/**
- * @route GET /api/config/available-token
- * @desc 获取可用的API令牌（内部接口）
- * @access Private
- */
 router.get('/available-token', async (req, res) => {
     try {
         const token = await ConfigService.getAvailableApiToken();
@@ -352,4 +293,3 @@ router.get('/available-token', async (req, res) => {
     }
 });
 export default router;
-//# sourceMappingURL=config.js.map

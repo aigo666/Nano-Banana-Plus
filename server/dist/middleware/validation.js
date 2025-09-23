@@ -1,6 +1,5 @@
 import Joi from 'joi';
 import { z } from 'zod';
-// 验证中间件工厂函数
 export const validate = (schema) => {
     return (req, res, next) => {
         const { error } = schema.validate(req.body);
@@ -14,7 +13,6 @@ export const validate = (schema) => {
         next();
     };
 };
-// 用户注册验证规则
 export const registerSchema = Joi.object({
     username: Joi.string()
         .alphanum()
@@ -51,7 +49,6 @@ export const registerSchema = Joi.object({
         'any.required': '确认密码是必需的'
     })
 });
-// 用户登录验证规则
 export const loginSchema = Joi.object({
     email: Joi.string()
         .email()
@@ -66,7 +63,6 @@ export const loginSchema = Joi.object({
         'any.required': '密码是必需的'
     })
 });
-// 用户状态更新验证规则
 export const updateUserStatusSchema = Joi.object({
     status: Joi.string()
         .valid('active', 'inactive', 'banned')
@@ -76,7 +72,6 @@ export const updateUserStatusSchema = Joi.object({
         'any.required': '状态是必需的'
     })
 });
-// 用户角色更新验证规则
 export const updateUserRoleSchema = Joi.object({
     role: Joi.string()
         .valid('user', 'admin')
@@ -86,7 +81,6 @@ export const updateUserRoleSchema = Joi.object({
         'any.required': '角色是必需的'
     })
 });
-// 分页查询验证规则
 export const paginationSchema = Joi.object({
     page: Joi.number().integer().min(1).default(1),
     limit: Joi.number().integer().min(1).max(100).default(20),
@@ -96,7 +90,6 @@ export const paginationSchema = Joi.object({
     vipStatus: Joi.string().valid('all', 'vip', 'normal').default('all'),
     status: Joi.string().valid('all', 'active', 'inactive', 'banned').default('all')
 });
-// 验证查询参数
 export const validateQuery = (schema) => {
     return (req, res, next) => {
         const { error, value } = schema.validate(req.query);
@@ -111,7 +104,6 @@ export const validateQuery = (schema) => {
         next();
     };
 };
-// Zod验证中间件工厂函数
 export const validateRequest = (schema) => {
     return (req, res, next) => {
         try {
@@ -133,7 +125,6 @@ export const validateRequest = (schema) => {
         }
     };
 };
-// Zod查询参数验证中间件
 export const validateZodQuery = (schema) => {
     return (req, res, next) => {
         try {
@@ -156,4 +147,3 @@ export const validateZodQuery = (schema) => {
         }
     };
 };
-//# sourceMappingURL=validation.js.map

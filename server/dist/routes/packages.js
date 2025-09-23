@@ -4,7 +4,6 @@ import { authenticateToken, requireAdmin } from '../middleware/auth.js';
 import { validate, validateQuery } from '../middleware/validation.js';
 import Joi from 'joi';
 const router = express.Router();
-// 验证模式
 const createPackageSchema = Joi.object({
     name: Joi.string().min(1).max(100).required().messages({
         'string.empty': '套餐名称不能为空',
@@ -96,7 +95,6 @@ const paginationSchema = Joi.object({
     sortOrder: Joi.string().valid('asc', 'desc').optional(),
     search: Joi.string().max(100).optional()
 });
-// 获取活跃套餐列表（公开接口，用于前端显示）
 router.get('/active', async (req, res) => {
     try {
         const packages = await PackageService.getActivePackages();
@@ -114,7 +112,6 @@ router.get('/active', async (req, res) => {
         });
     }
 });
-// 用户购买套餐
 router.post('/purchase', authenticateToken, validate(purchasePackageSchema), async (req, res) => {
     try {
         if (!req.user) {
@@ -138,7 +135,6 @@ router.post('/purchase', authenticateToken, validate(purchasePackageSchema), asy
         });
     }
 });
-// 获取用户的套餐列表
 router.get('/my-packages', authenticateToken, async (req, res) => {
     try {
         if (!req.user) {
@@ -162,7 +158,6 @@ router.get('/my-packages', authenticateToken, async (req, res) => {
         });
     }
 });
-// 获取用户可用次数
 router.get('/available-times', authenticateToken, async (req, res) => {
     try {
         if (!req.user) {
@@ -186,10 +181,7 @@ router.get('/available-times', authenticateToken, async (req, res) => {
         });
     }
 });
-// === 管理员接口 ===
-// 应用管理员权限中间件到以下所有路由
 router.use('/admin', authenticateToken, requireAdmin);
-// 获取套餐列表（管理员，分页）
 router.get('/admin', validateQuery(paginationSchema), async (req, res) => {
     try {
         const query = req.query;
@@ -208,7 +200,6 @@ router.get('/admin', validateQuery(paginationSchema), async (req, res) => {
         });
     }
 });
-// 获取套餐详情（管理员）
 router.get('/admin/:id', async (req, res) => {
     try {
         const packageId = parseInt(req.params.id);
@@ -239,7 +230,6 @@ router.get('/admin/:id', async (req, res) => {
         });
     }
 });
-// 创建套餐（管理员）
 router.post('/admin', validate(createPackageSchema), async (req, res) => {
     try {
         const packageData = req.body;
@@ -257,7 +247,6 @@ router.post('/admin', validate(createPackageSchema), async (req, res) => {
         });
     }
 });
-// 更新套餐（管理员）
 router.put('/admin/:id', validate(updatePackageSchema), async (req, res) => {
     try {
         const packageId = parseInt(req.params.id);
@@ -282,7 +271,6 @@ router.put('/admin/:id', validate(updatePackageSchema), async (req, res) => {
         });
     }
 });
-// 删除套餐（管理员）
 router.delete('/admin/:id', authenticateToken, requireAdmin, async (req, res) => {
     try {
         const packageId = parseInt(req.params.id);
@@ -307,4 +295,3 @@ router.delete('/admin/:id', authenticateToken, requireAdmin, async (req, res) =>
     }
 });
 export default router;
-//# sourceMappingURL=packages.js.map
