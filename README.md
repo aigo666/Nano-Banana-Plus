@@ -41,22 +41,22 @@
 
 ### 用户前台界面
 #### 未登录
-<img width="1097" height="750" alt="image" src="https://github.com/user-attachments/assets/cb65dabe-5423-4d18-9eeb-71b05e7580ff" />
+<img width="1097" height="750" alt="image" src="https://cdnimg.lyzplus.cn/ablai/ablbanana1.png" />
 
 #### 已登录
-<img width="1350" height="939" alt="image" src="https://github.com/user-attachments/assets/26148e1f-2ab8-46db-91b6-743929996d32" />
+<img width="1350" height="939" alt="image" src="https://cdnimg.lyzplus.cn/ablai/ablbanana2.png" />
 
 #### 个人中心
-<img width="1370" height="971" alt="image" src="https://github.com/user-attachments/assets/e1ad288c-404d-4eb6-b62a-260273b53b33" />
+<img width="1370" height="971" alt="image" src="https://cdnimg.lyzplus.cn/ablai/ablbanana3.png" />
 
 #### 套餐购买
-<img width="1258" height="982" alt="image" src="https://github.com/user-attachments/assets/bc0f9e51-3c22-462f-9d5e-2d5c30197cb6" />
+<img width="1258" height="982" alt="image" src="https://cdnimg.lyzplus.cn/ablai/ablbanana4.png" />
 
 #### 历史记录
-<img width="1235" height="1002" alt="image" src="https://github.com/user-attachments/assets/e5f0b54a-baba-42b8-b03d-4f90b4455a75" />
+<img width="1235" height="1002" alt="image" src="https://cdnimg.lyzplus.cn/ablai/ablbanana5.png" />
 
 ### 管理后台界面
-<img width="1703" height="946" alt="image" src="https://github.com/user-attachments/assets/6a9a2121-51c0-4242-81af-f9ca6aa1c851" />
+<img width="1703" height="946" alt="image" src="https://cdnimg.lyzplus.cn/ablai/ablbanana6.png" />
 
 ## 🚀 快速启动
 
