@@ -1,10 +1,14 @@
 import { pool } from '../config/database.js';
 export class RechargeService {
+    /**
+     * 获取充值记录列表（支持筛选和分页）
+     */
     static async getRechargeRecords(query) {
         const { page = 1, limit = 20, search, status, payment_method, start_date, end_date, min_amount, max_amount, user_id, sortBy = 'created_at', sortOrder = 'desc' } = query;
         const offset = (page - 1) * limit;
         const conditions = [];
         const params = [];
+        // 构建查询条件
         if (search) {
             conditions.push(`(
         u.username LIKE ? OR 
@@ -43,6 +47,7 @@ export class RechargeService {
             params.push(user_id);
         }
         const whereClause = conditions.length > 0 ? `WHERE ${conditions.join(' AND ')}` : '';
+        // 获取总数
         const countQuery = `
       SELECT COUNT(*) as total
       FROM recharge_records r
@@ -51,6 +56,7 @@ export class RechargeService {
     `;
         const [countResult] = await pool.execute(countQuery, params);
         const total = countResult[0].total;
+        // 获取记录列表
         const listQuery = `
       SELECT 
         r.*,
@@ -60,9 +66,9 @@ export class RechargeService {
       LEFT JOIN users u ON r.user_id = u.id
       ${whereClause}
       ORDER BY r.${sortBy} ${sortOrder}
-      LIMIT ? OFFSET ?
+      LIMIT ${limit} OFFSET ${offset}
     `;
-        const [records] = await pool.execute(listQuery, [...params, limit, offset]);
+        const [records] = await pool.execute(listQuery, params);
         return {
             records: records,
             pagination: {
@@ -73,11 +79,15 @@ export class RechargeService {
             }
         };
     }
+    /**
+     * 获取充值统计数据
+     */
     static async getRechargeStats() {
         const today = new Date().toISOString().split('T')[0];
         const monthStart = new Date();
         monthStart.setDate(1);
         const monthStartStr = monthStart.toISOString().split('T')[0];
+        // 总收入和总订单数
         const [totalResult] = await pool.execute(`
       SELECT 
         COALESCE(SUM(CASE WHEN status = 'completed' THEN amount ELSE 0 END), 0) as totalRevenue,
@@ -88,6 +98,7 @@ export class RechargeService {
         SUM(CASE WHEN status = 'refunded' THEN 1 ELSE 0 END) as refundedOrders
       FROM recharge_records
     `);
+        // 今日数据
         const [todayResult] = await pool.execute(`
       SELECT 
         COALESCE(SUM(CASE WHEN status = 'completed' THEN amount ELSE 0 END), 0) as todayRevenue,
@@ -95,6 +106,7 @@ export class RechargeService {
       FROM recharge_records
       WHERE DATE(created_at) = ?
     `, [today]);
+        // 本月数据
         const [monthResult] = await pool.execute(`
       SELECT 
         COALESCE(SUM(CASE WHEN status = 'completed' THEN amount ELSE 0 END), 0) as monthRevenue,
@@ -119,6 +131,9 @@ export class RechargeService {
             avgOrderAmount: stats.totalOrders > 0 ? Number(stats.totalRevenue) / stats.completedOrders : 0
         };
     }
+    /**
+     * 获取充值趋势图表数据
+     */
     static async getChartData(days = 30) {
         const [result] = await pool.execute(`
       SELECT 
@@ -136,6 +151,9 @@ export class RechargeService {
             orders: row.orders
         }));
     }
+    /**
+     * 获取支付方式统计
+     */
     static async getPaymentMethodStats() {
         const [result] = await pool.execute(`
       SELECT 
@@ -152,6 +170,9 @@ export class RechargeService {
             revenue: Number(row.revenue)
         }));
     }
+    /**
+     * 创建充值记录
+     */
     static async createRechargeRecord(data) {
         const { user_id, amount, payment_method, transaction_id } = data;
         const [result] = await pool.execute(`
@@ -160,6 +181,9 @@ export class RechargeService {
     `, [user_id, amount, payment_method, transaction_id]);
         return result.insertId;
     }
+    /**
+     * 更新充值记录状态
+     */
     static async updateRechargeStatus(id, status, transaction_id) {
         let query = 'UPDATE recharge_records SET status = ?';
         const params = [status];
@@ -170,20 +194,27 @@ export class RechargeService {
         query += ' WHERE id = ?';
         params.push(id);
         await pool.execute(query, params);
+        // 如果充值成功，更新用户余额
         if (status === 'completed') {
             await this.updateUserBalance(id);
         }
     }
+    /**
+     * 处理退款
+     */
     static async processRefund(id, reason) {
         const connection = await pool.getConnection();
         try {
             await connection.beginTransaction();
+            // 获取充值记录
             const [records] = await connection.execute('SELECT * FROM recharge_records WHERE id = ? AND status = "completed"', [id]);
             if (records.length === 0) {
                 throw new Error('充值记录不存在或状态不允许退款');
             }
             const record = records[0];
+            // 更新充值记录状态为已退款
             await connection.execute('UPDATE recharge_records SET status = "refunded" WHERE id = ?', [id]);
+            // 扣除用户余额
             await connection.execute(`
         UPDATE user_balances 
         SET 
@@ -201,15 +232,20 @@ export class RechargeService {
             connection.release();
         }
     }
+    /**
+     * 更新用户余额（充值成功时调用）
+     */
     static async updateUserBalance(rechargeId) {
         const connection = await pool.getConnection();
         try {
             await connection.beginTransaction();
+            // 获取充值记录
             const [records] = await connection.execute('SELECT * FROM recharge_records WHERE id = ?', [rechargeId]);
             if (records.length === 0) {
                 throw new Error('充值记录不存在');
             }
             const record = records[0];
+            // 更新或创建用户余额记录
             await connection.execute(`
         INSERT INTO user_balances (user_id, balance, total_recharged)
         VALUES (?, ?, ?)
@@ -227,6 +263,9 @@ export class RechargeService {
             connection.release();
         }
     }
+    /**
+     * 获取充值记录详情
+     */
     static async getRechargeRecordById(id) {
         const [result] = await pool.execute(`
       SELECT 
@@ -239,6 +278,9 @@ export class RechargeService {
     `, [id]);
         return result.length > 0 ? result[0] : null;
     }
+    /**
+     * 根据交易号获取充值记录
+     */
     static async getRechargeRecordByTransactionId(transactionId) {
         const [result] = await pool.execute(`
       SELECT 
@@ -251,8 +293,13 @@ export class RechargeService {
     `, [transactionId]);
         return result.length > 0 ? result[0] : null;
     }
+    /**
+     * 导出充值记录为CSV格式
+     */
     static async exportRechargeRecords(query) {
+        // 获取所有符合条件的记录（不分页）
         const { records } = await this.getRechargeRecords({ ...query, limit: 999999, page: 1 });
+        // 生成CSV内容
         const headers = [
             'ID', '用户名', '邮箱', '充值金额', '支付方式', '交易号', '状态', '创建时间', '更新时间'
         ];
@@ -273,3 +320,4 @@ export class RechargeService {
         return csvRows.join('\n');
     }
 }
+//# sourceMappingURL=RechargeService.js.map

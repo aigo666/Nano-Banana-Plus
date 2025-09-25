@@ -9,15 +9,22 @@ import fetch from 'node-fetch';
 import FormData from 'form-data';
 const router = express.Router();
 const API_BASE_URL = 'https://api.ablai.top';
+// 图片生成请求验证模式
 const generateImageSchema = z.object({
     prompt: z.string().min(1, '提示词不能为空').max(1000, '提示词不能超过1000个字符'),
     images: z.array(z.string()).optional().default([])
 });
+/**
+ * @route POST /api/generate/image
+ * @desc 生成图片
+ * @access Private (需要登录)
+ */
 router.post('/image', authenticateToken, validateRequest(generateImageSchema), async (req, res) => {
     try {
         const { prompt, images = [] } = req.body;
         const userId = req.user.userId;
         console.log(`用户 ${userId} 请求生成图片，提示词: ${prompt}, 参考图片数量: ${images.length}`);
+        // 检查用户是否有可用次数
         const availableTimes = await PackageService.checkUserAvailableTimes(userId);
         if (availableTimes <= 0) {
             const response = {
@@ -27,13 +34,15 @@ router.post('/image', authenticateToken, validateRequest(generateImageSchema), a
             return res.status(400).json(response);
         }
         console.log(`用户 ${userId} 剩余次数: ${availableTimes}`);
+        // 创建生成历史记录，初始不消耗次数
         const historyRecord = await GenerationHistoryService.createHistory({
             user_id: userId,
             prompt,
             original_images: images,
-            consumed_times: 0
+            consumed_times: 0 // 初始不消耗，成功后再更新
         });
         console.log(`创建历史记录: ${historyRecord.id}`);
+        // 获取可用的API令牌
         const apiToken = await ConfigService.getAvailableApiToken();
         if (!apiToken) {
             const response = {
@@ -46,6 +55,7 @@ router.post('/image', authenticateToken, validateRequest(generateImageSchema), a
         let imageUrl;
         let success = true;
         try {
+            // 根据是否有参考图片选择不同的生成方式
             if (images && images.length > 0) {
                 console.log('使用图生图模式');
                 imageUrl = await generateImageFromImage(prompt, images, apiToken.token);
@@ -59,11 +69,13 @@ router.post('/image', authenticateToken, validateRequest(generateImageSchema), a
         catch (error) {
             console.error('图片生成失败:', error);
             success = false;
+            // 更新历史记录为失败状态，失败时不消耗次数
             await GenerationHistoryService.updateHistory(historyRecord.id, {
                 status: 'failed',
                 error_message: error instanceof Error ? error.message : '未知错误',
-                consumed_times: 0
+                consumed_times: 0 // 失败时不消耗次数
             });
+            // 更新令牌错误统计
             await ConfigService.updateTokenUsage(apiToken.id, false);
             const response = {
                 success: false,
@@ -71,7 +83,9 @@ router.post('/image', authenticateToken, validateRequest(generateImageSchema), a
             };
             return res.status(500).json(response);
         }
+        // 更新令牌使用统计
         await ConfigService.updateTokenUsage(apiToken.id, true);
+        // 扣减用户使用次数
         const deductSuccess = await PackageService.usePackageTimes(userId, 1);
         if (!deductSuccess) {
             console.warn(`用户 ${userId} 次数扣减失败，但图片已生成`);
@@ -79,10 +93,11 @@ router.post('/image', authenticateToken, validateRequest(generateImageSchema), a
         else {
             console.log(`用户 ${userId} 成功扣减 1 次使用次数`);
         }
+        // 更新历史记录为完成状态，成功时消耗1次
         await GenerationHistoryService.updateHistory(historyRecord.id, {
             status: 'completed',
             generated_image: imageUrl,
-            consumed_times: 1
+            consumed_times: 1 // 成功时消耗1次
         });
         console.log(`历史记录 ${historyRecord.id} 更新完成`);
         const response = {
@@ -102,6 +117,7 @@ router.post('/image', authenticateToken, validateRequest(generateImageSchema), a
         res.status(500).json(response);
     }
 });
+// 文生图函数
 async function generateImageFromText(prompt, apiKey) {
     console.log('执行文生图，提示词:', prompt);
     const requestBody = {
@@ -135,12 +151,14 @@ async function generateImageFromText(prompt, apiKey) {
     }
     return data.data[0].url;
 }
+// 图生图函数
 async function generateImageFromImage(prompt, images, apiKey) {
     try {
         console.log('开始图生图处理，参考图片数量:', images.length);
         const formData = new FormData();
         formData.append('model', 'nano-banana');
         formData.append('prompt', prompt);
+        // 处理所有参考图片
         for (let i = 0; i < images.length; i++) {
             const imageDataUrl = images[i];
             if (imageDataUrl.startsWith('http')) {
@@ -151,14 +169,18 @@ async function generateImageFromImage(prompt, images, apiKey) {
                         throw new Error(`下载图片失败: ${response.status} ${response.statusText}`);
                     }
                     const buffer = await response.buffer();
+                    // 检查响应的Content-Type头
                     const contentType = response.headers.get('content-type');
                     console.log(`图片 ${i + 1} Content-Type: ${contentType}`);
+                    // 验证是否为有效的图片格式
                     if (!contentType || !contentType.startsWith('image/')) {
                         throw new Error(`无效的图片格式: ${contentType}`);
                     }
+                    // 验证buffer不为空
                     if (!buffer || buffer.length === 0) {
                         throw new Error('下载的图片数据为空');
                     }
+                    // 从Content-Type或URL中推断文件扩展名
                     let ext = 'png';
                     let mimeType = contentType;
                     if (contentType.includes('jpeg') || contentType.includes('jpg')) {
@@ -178,6 +200,7 @@ async function generateImageFromImage(prompt, images, apiKey) {
                         mimeType = 'image/webp';
                     }
                     else {
+                        // 如果Content-Type不明确，尝试从URL推断
                         const urlPath = new URL(imageDataUrl).pathname;
                         const urlExt = urlPath.split('.').pop()?.toLowerCase();
                         if (urlExt && ['jpg', 'jpeg', 'png', 'gif', 'webp'].includes(urlExt)) {
@@ -200,6 +223,7 @@ async function generateImageFromImage(prompt, images, apiKey) {
             else if (imageDataUrl.startsWith('data:image/')) {
                 console.log(`图片 ${i + 1} 是base64格式，转换为buffer...`);
                 try {
+                    // 验证base64格式
                     if (!imageDataUrl.includes(',')) {
                         throw new Error('无效的base64数据格式');
                     }
@@ -208,11 +232,14 @@ async function generateImageFromImage(prompt, images, apiKey) {
                         throw new Error('base64数据为空');
                     }
                     const buffer = Buffer.from(base64Data, 'base64');
+                    // 验证buffer不为空
                     if (!buffer || buffer.length === 0) {
                         throw new Error('转换后的图片数据为空');
                     }
+                    // 从base64 data URL中提取MIME类型
                     const mimeMatch = imageDataUrl.match(/^data:([^;]+);base64,/);
                     const mimeType = mimeMatch ? mimeMatch[1] : 'image/png';
+                    // 验证MIME类型
                     if (!mimeType.startsWith('image/')) {
                         throw new Error(`无效的图片MIME类型: ${mimeType}`);
                     }
@@ -267,3 +294,4 @@ async function generateImageFromImage(prompt, images, apiKey) {
     }
 }
 export default router;
+//# sourceMappingURL=generate.js.map

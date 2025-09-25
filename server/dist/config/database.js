@@ -12,7 +12,9 @@ export const dbConfig = {
     queueLimit: 0,
     charset: 'utf8mb4'
 };
+// 创建数据库连接池
 export const pool = mysql.createPool(dbConfig);
+// 测试数据库连接
 export async function testConnection() {
     try {
         const connection = await pool.getConnection();
@@ -25,8 +27,10 @@ export async function testConnection() {
         return false;
     }
 }
+// 初始化数据库表
 export async function initDatabase() {
     try {
+        // 用户表
         await pool.execute(`
       CREATE TABLE IF NOT EXISTS users (
         id INT AUTO_INCREMENT PRIMARY KEY,
@@ -36,6 +40,8 @@ export async function initDatabase() {
         avatar VARCHAR(255) DEFAULT NULL,
         role ENUM('user', 'admin') DEFAULT 'user',
         status ENUM('active', 'inactive', 'banned') DEFAULT 'active',
+        is_member TINYINT(1) DEFAULT 0 COMMENT '是否会员',
+        member_expires_at TIMESTAMP NULL DEFAULT NULL COMMENT '会员过期时间',
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
         last_login TIMESTAMP NULL DEFAULT NULL,
@@ -44,6 +50,7 @@ export async function initDatabase() {
         INDEX idx_status (status)
       ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
     `);
+        // 生成历史表
         await pool.execute(`
       CREATE TABLE IF NOT EXISTS generation_history (
         id INT AUTO_INCREMENT PRIMARY KEY,
@@ -52,6 +59,7 @@ export async function initDatabase() {
         original_images JSON DEFAULT NULL,
         generated_image VARCHAR(255) DEFAULT NULL,
         style_template VARCHAR(100) DEFAULT NULL,
+        consumed_times INT DEFAULT 1 COMMENT '消耗次数',
         status ENUM('pending', 'processing', 'completed', 'failed') DEFAULT 'pending',
         error_message TEXT DEFAULT NULL,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
@@ -62,6 +70,7 @@ export async function initDatabase() {
         INDEX idx_created_at (created_at)
       ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
     `);
+        // 会员充值记录表
         await pool.execute(`
       CREATE TABLE IF NOT EXISTS recharge_records (
         id INT AUTO_INCREMENT PRIMARY KEY,
@@ -78,6 +87,7 @@ export async function initDatabase() {
         INDEX idx_transaction_id (transaction_id)
       ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
     `);
+        // 用户余额表
         await pool.execute(`
       CREATE TABLE IF NOT EXISTS user_balances (
         id INT AUTO_INCREMENT PRIMARY KEY,
@@ -91,6 +101,7 @@ export async function initDatabase() {
         INDEX idx_user_id (user_id)
       ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
     `);
+        // 套餐表
         await pool.execute(`
       CREATE TABLE IF NOT EXISTS packages (
         id INT AUTO_INCREMENT PRIMARY KEY,
@@ -106,6 +117,7 @@ export async function initDatabase() {
         INDEX idx_sort_order (sort_order)
       ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
     `);
+        // 用户套餐购买记录表
         await pool.execute(`
       CREATE TABLE IF NOT EXISTS user_packages (
         id INT AUTO_INCREMENT PRIMARY KEY,
@@ -128,6 +140,7 @@ export async function initDatabase() {
         INDEX idx_expires_at (expires_at)
       ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
     `);
+        // API令牌配置表
         await pool.execute(`
       CREATE TABLE IF NOT EXISTS api_tokens (
         id INT AUTO_INCREMENT PRIMARY KEY,
@@ -149,6 +162,7 @@ export async function initDatabase() {
         INDEX idx_provider (provider)
       ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
     `);
+        // 系统配置表
         await pool.execute(`
       CREATE TABLE IF NOT EXISTS system_configs (
         id INT AUTO_INCREMENT PRIMARY KEY,
@@ -168,3 +182,4 @@ export async function initDatabase() {
         throw error;
     }
 }
+//# sourceMappingURL=database.js.map

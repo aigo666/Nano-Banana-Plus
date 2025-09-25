@@ -4,6 +4,7 @@ import { authenticateToken, requireAdmin } from '../middleware/auth.js';
 import { validateRequest, validateZodQuery } from '../middleware/validation.js';
 import { z } from 'zod';
 const router = express.Router();
+// 查询参数验证schema
 const rechargeQuerySchema = z.object({
     page: z.coerce.number().min(1).default(1),
     limit: z.coerce.number().min(1).max(100).default(20),
@@ -17,21 +18,27 @@ const rechargeQuerySchema = z.object({
     sortBy: z.enum(['created_at', 'amount', 'status']).default('created_at'),
     sortOrder: z.enum(['asc', 'desc']).default('desc')
 });
+// 创建充值记录schema
 const createRechargeSchema = z.object({
     amount: z.number().min(0.01).max(99999.99),
     payment_method: z.string().min(1).max(50),
     transaction_id: z.string().max(100).optional()
 });
+// 更新状态schema
 const updateStatusSchema = z.object({
     status: z.enum(['pending', 'completed', 'failed', 'refunded']),
     transaction_id: z.string().max(100).optional()
 });
+// 退款schema
 const refundSchema = z.object({
     reason: z.string().min(1).max(500)
 });
+// 图表数据查询schema
 const chartQuerySchema = z.object({
     days: z.coerce.number().min(1).max(365).default(30)
 });
+// ==================== 管理员接口 ====================
+// 获取充值记录列表（管理员）
 router.get('/admin/records', authenticateToken, requireAdmin, validateZodQuery(rechargeQuerySchema), async (req, res) => {
     try {
         const query = req.query;
@@ -50,6 +57,7 @@ router.get('/admin/records', authenticateToken, requireAdmin, validateZodQuery(r
         });
     }
 });
+// 获取充值统计数据（管理员）
 router.get('/admin/stats', authenticateToken, requireAdmin, async (req, res) => {
     try {
         const stats = await RechargeService.getRechargeStats();
@@ -67,6 +75,7 @@ router.get('/admin/stats', authenticateToken, requireAdmin, async (req, res) => 
         });
     }
 });
+// 获取充值趋势图表数据（管理员）
 router.get('/admin/chart-data', authenticateToken, requireAdmin, validateZodQuery(chartQuerySchema), async (req, res) => {
     try {
         const { days } = req.query;
@@ -85,6 +94,7 @@ router.get('/admin/chart-data', authenticateToken, requireAdmin, validateZodQuer
         });
     }
 });
+// 获取支付方式统计（管理员）
 router.get('/admin/payment-stats', authenticateToken, requireAdmin, async (req, res) => {
     try {
         const paymentStats = await RechargeService.getPaymentMethodStats();
@@ -102,6 +112,7 @@ router.get('/admin/payment-stats', authenticateToken, requireAdmin, async (req, 
         });
     }
 });
+// 获取充值记录详情（管理员）
 router.get('/admin/records/:id', authenticateToken, requireAdmin, async (req, res) => {
     try {
         const id = parseInt(req.params.id);
@@ -132,6 +143,7 @@ router.get('/admin/records/:id', authenticateToken, requireAdmin, async (req, re
         });
     }
 });
+// 更新充值记录状态（管理员）
 router.patch('/admin/records/:id/status', authenticateToken, requireAdmin, validateRequest(updateStatusSchema), async (req, res) => {
     try {
         const id = parseInt(req.params.id);
@@ -142,6 +154,7 @@ router.patch('/admin/records/:id/status', authenticateToken, requireAdmin, valid
                 message: '无效的记录ID'
             });
         }
+        // 检查记录是否存在
         const record = await RechargeService.getRechargeRecordById(id);
         if (!record) {
             return res.status(404).json({
@@ -163,6 +176,7 @@ router.patch('/admin/records/:id/status', authenticateToken, requireAdmin, valid
         });
     }
 });
+// 处理退款（管理员）
 router.post('/admin/records/:id/refund', authenticateToken, requireAdmin, validateRequest(refundSchema), async (req, res) => {
     try {
         const id = parseInt(req.params.id);
@@ -187,12 +201,15 @@ router.post('/admin/records/:id/refund', authenticateToken, requireAdmin, valida
         });
     }
 });
+// 导出充值记录（管理员）
 router.get('/admin/export', authenticateToken, requireAdmin, validateZodQuery(rechargeQuerySchema), async (req, res) => {
     try {
         const query = req.query;
         const csvContent = await RechargeService.exportRechargeRecords(query);
+        // 设置响应头
         res.setHeader('Content-Type', 'text/csv; charset=utf-8');
         res.setHeader('Content-Disposition', `attachment; filename="recharge_records_${new Date().toISOString().split('T')[0]}.csv"`);
+        // 添加BOM以支持中文
         res.send('\uFEFF' + csvContent);
     }
     catch (error) {
@@ -203,6 +220,8 @@ router.get('/admin/export', authenticateToken, requireAdmin, validateZodQuery(re
         });
     }
 });
+// ==================== 用户接口 ====================
+// 获取个人充值记录
 router.get('/my-records', authenticateToken, validateZodQuery(rechargeQuerySchema), async (req, res) => {
     try {
         const query = { ...req.query, user_id: req.user?.userId };
@@ -221,6 +240,7 @@ router.get('/my-records', authenticateToken, validateZodQuery(rechargeQuerySchem
         });
     }
 });
+// 创建充值记录
 router.post('/create', authenticateToken, validateRequest(createRechargeSchema), async (req, res) => {
     try {
         const { amount, payment_method, transaction_id } = req.body;
@@ -251,6 +271,7 @@ router.post('/create', authenticateToken, validateRequest(createRechargeSchema),
         });
     }
 });
+// 获取个人充值记录详情
 router.get('/my-records/:id', authenticateToken, async (req, res) => {
     try {
         const id = parseInt(req.params.id);
@@ -268,6 +289,7 @@ router.get('/my-records/:id', authenticateToken, async (req, res) => {
                 message: '充值记录不存在'
             });
         }
+        // 检查是否为用户自己的记录
         if (record.user_id !== user_id) {
             return res.status(403).json({
                 success: false,
@@ -289,3 +311,4 @@ router.get('/my-records/:id', authenticateToken, async (req, res) => {
     }
 });
 export default router;
+//# sourceMappingURL=recharge.js.map

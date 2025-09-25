@@ -3,7 +3,9 @@ import { UserService } from '../services/UserService.js';
 import { authenticateToken, requireAdmin } from '../middleware/auth.js';
 import { validate, validateQuery, updateUserStatusSchema, updateUserRoleSchema, paginationSchema } from '../middleware/validation.js';
 const router = express.Router();
+// 应用管理员权限中间件到所有路由
 router.use(authenticateToken, requireAdmin);
+// 获取用户列表（分页）
 router.get('/users', validateQuery(paginationSchema), async (req, res) => {
     try {
         const query = req.query;
@@ -22,6 +24,7 @@ router.get('/users', validateQuery(paginationSchema), async (req, res) => {
         });
     }
 });
+// 获取用户详情
 router.get('/users/:id', async (req, res) => {
     try {
         const userId = parseInt(req.params.id);
@@ -57,6 +60,7 @@ router.get('/users/:id', async (req, res) => {
         });
     }
 });
+// 更新用户状态
 router.patch('/users/:id/status', validate(updateUserStatusSchema), async (req, res) => {
     try {
         const userId = parseInt(req.params.id);
@@ -67,6 +71,7 @@ router.patch('/users/:id/status', validate(updateUserStatusSchema), async (req, 
                 message: '无效的用户ID'
             });
         }
+        // 检查用户是否存在
         const user = await UserService.getUserById(userId);
         if (!user) {
             return res.status(404).json({
@@ -74,6 +79,7 @@ router.patch('/users/:id/status', validate(updateUserStatusSchema), async (req, 
                 message: '用户不存在'
             });
         }
+        // 不能修改自己的状态
         if (req.user && req.user.userId === userId) {
             return res.status(400).json({
                 success: false,
@@ -94,6 +100,7 @@ router.patch('/users/:id/status', validate(updateUserStatusSchema), async (req, 
         });
     }
 });
+// 更新用户角色
 router.patch('/users/:id/role', validate(updateUserRoleSchema), async (req, res) => {
     try {
         const userId = parseInt(req.params.id);
@@ -104,6 +111,7 @@ router.patch('/users/:id/role', validate(updateUserRoleSchema), async (req, res)
                 message: '无效的用户ID'
             });
         }
+        // 检查用户是否存在
         const user = await UserService.getUserById(userId);
         if (!user) {
             return res.status(404).json({
@@ -111,6 +119,7 @@ router.patch('/users/:id/role', validate(updateUserRoleSchema), async (req, res)
                 message: '用户不存在'
             });
         }
+        // 不能修改自己的角色
         if (req.user && req.user.userId === userId) {
             return res.status(400).json({
                 success: false,
@@ -131,6 +140,7 @@ router.patch('/users/:id/role', validate(updateUserRoleSchema), async (req, res)
         });
     }
 });
+// 更新用户信息
 router.patch('/users/:id', async (req, res) => {
     try {
         const userId = parseInt(req.params.id);
@@ -141,6 +151,7 @@ router.patch('/users/:id', async (req, res) => {
                 message: '无效的用户ID'
             });
         }
+        // 检查用户是否存在
         const user = await UserService.getUserById(userId);
         if (!user) {
             return res.status(404).json({
@@ -148,10 +159,12 @@ router.patch('/users/:id', async (req, res) => {
                 message: '用户不存在'
             });
         }
+        // 不能修改自己的角色和状态
         if (req.user && req.user.userId === userId) {
             delete updateData.role;
             delete updateData.status;
         }
+        // 验证密码（如果提供）
         if (updateData.newPassword) {
             if (typeof updateData.newPassword !== 'string' || updateData.newPassword.length < 6) {
                 return res.status(400).json({
@@ -174,6 +187,7 @@ router.patch('/users/:id', async (req, res) => {
         });
     }
 });
+// 删除用户
 router.delete('/users/:id', async (req, res) => {
     try {
         const userId = parseInt(req.params.id);
@@ -183,6 +197,7 @@ router.delete('/users/:id', async (req, res) => {
                 message: '无效的用户ID'
             });
         }
+        // 检查用户是否存在
         const user = await UserService.getUserById(userId);
         if (!user) {
             return res.status(404).json({
@@ -190,6 +205,7 @@ router.delete('/users/:id', async (req, res) => {
                 message: '用户不存在'
             });
         }
+        // 不能删除自己
         if (req.user && req.user.userId === userId) {
             return res.status(400).json({
                 success: false,
@@ -210,8 +226,10 @@ router.delete('/users/:id', async (req, res) => {
         });
     }
 });
+// 获取系统统计信息
 router.get('/stats', async (req, res) => {
     try {
+        // 这里可以添加更多统计信息的查询逻辑
         const totalUsersQuery = await UserService.getUsers({ page: 1, limit: 1 });
         const totalUsers = totalUsersQuery.pagination.total;
         res.json({
@@ -219,6 +237,10 @@ router.get('/stats', async (req, res) => {
             message: '获取统计信息成功',
             data: {
                 totalUsers,
+                // 可以添加更多统计信息
+                // totalGenerations: 0,
+                // totalRecharges: 0,
+                // activeUsers: 0
             }
         });
     }
@@ -231,3 +253,4 @@ router.get('/stats', async (req, res) => {
     }
 });
 export default router;
+//# sourceMappingURL=admin.js.map

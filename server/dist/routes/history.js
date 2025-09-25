@@ -3,11 +3,13 @@ import { GenerationHistoryService } from '../services/GenerationHistoryService.j
 import { authenticateToken, requireAdmin } from '../middleware/auth.js';
 import { z } from 'zod';
 const router = express.Router();
+// 查询参数验证模式
 const historyQuerySchema = z.object({
     page: z.coerce.number().min(1).default(1),
     limit: z.coerce.number().min(1).max(100).default(20),
     status: z.enum(['pending', 'processing', 'completed', 'failed']).optional()
 });
+// 管理员查询参数验证模式
 const adminHistoryQuerySchema = z.object({
     page: z.coerce.number().min(1).default(1),
     limit: z.coerce.number().min(1).max(100).default(20),
@@ -18,6 +20,11 @@ const adminHistoryQuerySchema = z.object({
     endDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional(),
     prompt: z.string().optional()
 });
+/**
+ * @route GET /api/history/user
+ * @desc 获取用户的生成历史记录
+ * @access Private (需要登录)
+ */
 router.get('/user', authenticateToken, async (req, res) => {
     try {
         const userId = req.user.userId;
@@ -41,6 +48,11 @@ router.get('/user', authenticateToken, async (req, res) => {
         res.status(500).json(response);
     }
 });
+/**
+ * @route GET /api/history/user/stats
+ * @desc 获取用户的生成统计信息
+ * @access Private (需要登录)
+ */
 router.get('/user/stats', authenticateToken, async (req, res) => {
     try {
         const userId = req.user.userId;
@@ -63,9 +75,16 @@ router.get('/user/stats', authenticateToken, async (req, res) => {
         res.status(500).json(response);
     }
 });
+// 删除功能已移除 - 用户只能查看历史记录，不能删除
+/**
+ * @route GET /api/history/admin
+ * @desc 获取所有用户的生成历史记录（管理员）- 支持多种筛选条件
+ * @access Admin
+ */
 router.get('/admin', authenticateToken, requireAdmin, async (req, res) => {
     try {
         const { page, limit, status, username, email, startDate, endDate, prompt } = req.query;
+        // 构建筛选条件对象
         const filters = {};
         if (status)
             filters.status = status;
@@ -99,3 +118,4 @@ router.get('/admin', authenticateToken, requireAdmin, async (req, res) => {
     }
 });
 export default router;
+//# sourceMappingURL=history.js.map

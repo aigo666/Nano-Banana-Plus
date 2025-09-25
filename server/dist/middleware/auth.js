@@ -1,7 +1,8 @@
 import { UserService } from '../services/UserService.js';
+// JWT认证中间件
 export const authenticateToken = (req, res, next) => {
     const authHeader = req.headers['authorization'];
-    const token = authHeader && authHeader.split(' ')[1];
+    const token = authHeader && authHeader.split(' ')[1]; // Bearer TOKEN
     if (!token) {
         return res.status(401).json({
             success: false,
@@ -20,6 +21,7 @@ export const authenticateToken = (req, res, next) => {
         });
     }
 };
+// 管理员权限检查中间件
 export const requireAdmin = (req, res, next) => {
     if (!req.user) {
         return res.status(401).json({
@@ -35,6 +37,7 @@ export const requireAdmin = (req, res, next) => {
     }
     next();
 };
+// 用户状态检查中间件
 export const checkUserStatus = async (req, res, next) => {
     if (!req.user) {
         return res.status(401).json({
@@ -71,3 +74,4 @@ export const checkUserStatus = async (req, res, next) => {
         });
     }
 };
+//# sourceMappingURL=auth.js.map
