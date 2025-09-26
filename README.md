@@ -64,30 +64,37 @@
 
 **一键启动**，无需安装Node.js和配置环境：
 
-#### 本地部署（连接本地MySQL）
+#### 推荐部署方式（Host网络模式）
 ```bash
 docker run -d \
   --name nano-banana-app \
-  -p 3000:3000 \
-  -e DB_HOST=host.docker.internal \
+  --network host \
+  -e DB_HOST=127.0.0.1 \
   -e DB_PORT=3306 \
   -e DB_USER=root \
-  -e DB_PASSWORD=你的密码 \
+  -e DB_PASSWORD=你的数据库密码 \
   -e DB_NAME=nano_banana \
   -e DB_SSL=false \
+  -e BACKEND_PORT=8000 \
   --restart=unless-stopped \
   aigo666/nano-banana:latest
 ```
 
-#### 远程部署（连接远程MySQL）
+> 🎯 **Host网络模式优势**：
+> - ✅ **简单可靠**：直接使用宿主机网络，无网络隔离问题
+> - ✅ **性能更佳**：减少网络层次，提升性能
+> - ✅ **连接稳定**：避免Docker网络配置导致的连接问题
+> - ⚠️ **注意**：应用将直接在宿主机3000端口运行
+
+#### 桥接网络部署（如需网络隔离）
 ```bash
 docker run -d \
   --name nano-banana-app \
   -p 3000:3000 \
-  -e DB_HOST=你的MySQL主机地址 \
+  -e DB_HOST=你的MySQL主机IP \
   -e DB_PORT=3306 \
   -e DB_USER=root \
-  -e DB_PASSWORD=你的密码 \
+  -e DB_PASSWORD=你的数据库密码 \
   -e DB_NAME=nano_banana \
   -e DB_SSL=false \
   -e NODE_ENV=production \
